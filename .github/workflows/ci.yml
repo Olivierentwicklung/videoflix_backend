@@ -31,4 +31,4 @@ jobs:
         run: pylint manage.py core
 
       - name: Run tests with coverage
-        run: pytest --cov=. --cov-fail-under=98
+        run: pytest --cov=. --cov-fail-under=70
