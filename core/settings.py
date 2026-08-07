@@ -126,7 +126,8 @@ RQ_QUEUES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME': 'django.contrib.auth.'
+        'password_validation.UserAttributeSimilarityValidator',
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
@@ -185,7 +186,8 @@ JAZZMIN_SETTINGS = {
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'videoflix   API Endpoint Dokumentation',
-    'DESCRIPTION': 'Videoflix ist eine eigenständig entwickelte Videostreaming-Plattform im Stil von Netflix.',
+    'DESCRIPTION': 'Videoflix ist eine eigenständig entwickelte '
+    'Videostreaming-Plattform im Stil von Netflix.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'TAGS': [
