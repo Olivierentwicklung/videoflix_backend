@@ -1,0 +1,15 @@
+[MAIN]
+load-plugins=pylint_django
+django-settings-module=core.settings
+ignore=migrations
+
+[MESSAGES CONTROL]
+disable=
+    missing-module-docstring,
+    missing-class-docstring,
+    import-outside-toplevel,
+    wildcard-import,
+    unused-wildcard-import
+
+[FORMAT]
+max-line-length=120
