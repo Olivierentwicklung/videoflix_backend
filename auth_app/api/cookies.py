@@ -32,3 +32,24 @@ def set_jwt_cookies(response, access_token, refresh_token):
     )
 
     return response
+
+
+def delete_jwt_cookies(response):
+    """Expire both JWT cookies using the paths used when they were set."""
+    common_options = {
+        'domain': settings.JWT_COOKIE_DOMAIN,
+        'samesite': settings.JWT_COOKIE_SAMESITE,
+    }
+
+    response.delete_cookie(
+        key=settings.JWT_ACCESS_COOKIE_NAME,
+        path=settings.JWT_ACCESS_COOKIE_PATH,
+        **common_options,
+    )
+    response.delete_cookie(
+        key=settings.JWT_REFRESH_COOKIE_NAME,
+        path=settings.JWT_REFRESH_COOKIE_PATH,
+        **common_options,
+    )
+
+    return response
