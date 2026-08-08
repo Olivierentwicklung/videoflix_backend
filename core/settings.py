@@ -11,11 +11,30 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 load_dotenv()
+
+
+def env_bool(name, default=False):
+    """Read a boolean environment variable with strict validation."""
+    value = os.environ.get(name)
+    if value is None:
+        return default
+
+    normalized_value = value.strip().lower()
+    if normalized_value in {'1', 'true', 'yes', 'on'}:
+        return True
+    if normalized_value in {'0', 'false', 'no', 'off'}:
+        return False
+
+    raise ImproperlyConfigured(
+        f'{name} must be one of: true, false, 1, 0, yes, no, on, off.'
+    )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,7 +49,7 @@ SECRET_KEY = os.getenv(
     default='django-insecure-@#x5h3zj!g+8g1v@2^b6^9$8&f1r7g$@t3v!p4#=g0r5qzj4m3',
 )
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG')
+DEBUG = env_bool('DJANGO_DEBUG', default=False)
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', default='localhost').split(',')
 CSRF_TRUSTED_ORIGINS = os.environ.get(
@@ -50,7 +69,7 @@ CORS_ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 CORS_ALLOW_CREDENTIALS = (
-    os.environ.get('CORS_ALLOW_CREDENTIALS', default='True').lower() == 'true'
+    env_bool('CORS_ALLOW_CREDENTIALS', default=True)
 )
 BACKEND_URL = os.environ.get(
     'BACKEND_URL',
@@ -70,6 +89,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'django_rq',
     'drf_spectacular',
     'auth_app.apps.AuthAppConfig',
@@ -208,8 +228,65 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'auth_app.api.authentication.CookieJWTAuthentication',
+    ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(
+        minutes=int(os.environ.get('JWT_ACCESS_TOKEN_MINUTES', default=5))
+    ),
+    'REFRESH_TOKEN_LIFETIME': timedelta(
+        days=int(os.environ.get('JWT_REFRESH_TOKEN_DAYS', default=7))
+    ),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': os.environ.get('JWT_SIGNING_KEY', default=SECRET_KEY),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'UPDATE_LAST_LOGIN': False,
+}
+
+JWT_ACCESS_COOKIE_NAME = 'access_token'
+JWT_REFRESH_COOKIE_NAME = 'refresh_token'
+JWT_COOKIE_HTTPONLY = True
+JWT_COOKIE_SECURE = env_bool('JWT_COOKIE_SECURE', default=not DEBUG)
+JWT_COOKIE_SAMESITE = os.environ.get('JWT_COOKIE_SAMESITE', default='Lax').title()
+JWT_COOKIE_DOMAIN = os.environ.get('JWT_COOKIE_DOMAIN') or None
+JWT_ACCESS_COOKIE_PATH = '/'
+JWT_REFRESH_COOKIE_PATH = os.environ.get(
+    'JWT_REFRESH_COOKIE_PATH',
+    default='/api/token/refresh/',
+)
+
+if JWT_COOKIE_SAMESITE not in {'Lax', 'Strict', 'None'}:
+    raise ImproperlyConfigured(
+        'JWT_COOKIE_SAMESITE must be one of: Lax, Strict, None.'
+    )
+if JWT_COOKIE_SAMESITE == 'None' and not JWT_COOKIE_SECURE:
+    raise ImproperlyConfigured(
+        'JWT_COOKIE_SECURE must be true when JWT_COOKIE_SAMESITE is None.'
+    )
+
+# JavaScript must be able to read the CSRF cookie and mirror its value in the
+# X-CSRFToken header. JWT cookies themselves remain inaccessible to scripts.
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', default=JWT_COOKIE_SECURE)
+CSRF_COOKIE_SAMESITE = os.environ.get(
+    'CSRF_COOKIE_SAMESITE',
+    default=JWT_COOKIE_SAMESITE,
+).title()
+
+if CSRF_COOKIE_SAMESITE not in {'Lax', 'Strict', 'None'}:
+    raise ImproperlyConfigured(
+        'CSRF_COOKIE_SAMESITE must be one of: Lax, Strict, None.'
+    )
+if CSRF_COOKIE_SAMESITE == 'None' and not CSRF_COOKIE_SECURE:
+    raise ImproperlyConfigured(
+        'CSRF_COOKIE_SECURE must be true when CSRF_COOKIE_SAMESITE is None.'
+    )
 
 JAZZMIN_SETTINGS = {
     'site_title': 'DA & Olivier Videoflix Admin',

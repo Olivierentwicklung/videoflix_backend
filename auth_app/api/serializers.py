@@ -1,7 +1,65 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 
 User = get_user_model()
+
+
+class LoginSerializer(TokenObtainPairSerializer):  # pylint: disable=abstract-method
+    """Authenticate an active user by email and issue a JWT pair."""
+
+    username_field = 'email'
+    default_error_messages = {
+        'no_active_account': 'Invalid email or password.',
+    }
+
+    def __init__(self, *args, **kwargs):
+        """Expose the endpoint's email and password request fields."""
+        super().__init__(*args, **kwargs)
+        self.user = None
+        self.fields['email'] = serializers.EmailField(write_only=True)
+        self.fields['password'] = serializers.CharField(
+            write_only=True,
+            trim_whitespace=False,
+            style={'input_type': 'password'},
+        )
+
+    def validate(self, attrs):
+        """Authenticate case-insensitively without revealing account state."""
+        normalized_email = User.objects.normalize_email(attrs['email'])  # type:ignore
+        candidate = (
+            User.objects.filter(email__iexact=normalized_email)  # type:ignore
+            .only('username')
+            .order_by('pk')
+            .first()
+        )
+        username = candidate.get_username() if candidate else normalized_email
+        user = authenticate(
+            request=self.context.get('request'),
+            username=username,
+            password=attrs['password'],
+        )
+
+        if not simplejwt_settings.USER_AUTHENTICATION_RULE(user):  # type:ignore
+            raise AuthenticationFailed(
+                self.error_messages['no_active_account'],
+                code='no_active_account',
+            )
+
+        self.user = user
+        refresh = self.get_token(user)  # type:ignore
+
+        return {
+            'access': str(refresh.access_token),  # type:ignore
+            'refresh': str(refresh),
+            'detail': 'Login successful',
+            'user': {
+                'id': user.pk,  # type:ignore
+                'username': user.get_username(),  # type:ignore
+            },
+        }
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
