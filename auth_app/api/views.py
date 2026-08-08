@@ -1,6 +1,4 @@
-from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django_rq import get_queue
@@ -11,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from auth_app.api.serializers import RegistrationSerializer
+from auth_app.api.utils import send_activation_email
 
 
 class RegistrationView(APIView):
@@ -33,16 +32,9 @@ class RegistrationView(APIView):
 
         token = default_token_generator.make_token(user)  # type:ignore
         uid = urlsafe_base64_encode(force_bytes(user.pk))  # type:ignore
-        activation_url = request.build_absolute_uri(f'/api/activate/{uid}/{token}/')
 
         queue = get_queue('default')
-        queue.enqueue(
-            send_mail,
-            subject='Activate your Videoflix account',
-            message=f'Activate your account: {activation_url}',
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],  # type:ignore
-        )
+        queue.enqueue(send_activation_email, user, uid, token)
 
         return Response(
             {

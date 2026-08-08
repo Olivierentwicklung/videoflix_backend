@@ -1,7 +1,11 @@
+from html import unescape
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.urls import reverse
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from fakeredis import FakeStrictRedis
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -75,8 +79,24 @@ def test_register_creates_inactive_user(
     }
 
     assert len(mail.outbox) == 1
-    assert mail.outbox[0].to == [registration_data['email']]
-    assert response.data['token'] in mail.outbox[0].body
+    activation_email = mail.outbox[0]
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    activation_url = (
+        'http://127.0.0.1:5500/pages/auth/activate.html'
+        f'?uid={uid}&token={response.data["token"]}'
+    )
+
+    assert activation_email.to == [registration_data['email']]
+    assert activation_email.subject == 'Activate your Videoflix account'
+    assert activation_url in activation_email.body
+    assert len(activation_email.alternatives) == 1
+    assert activation_email.alternatives[0].mimetype == 'text/html'
+    html_message = unescape(activation_email.alternatives[0].content)
+    assert activation_url in html_message
+    assert (
+        'http://127.0.0.1:8000/static/images/logo.svg'
+        in html_message
+    )
 
 
 @pytest.mark.django_db
@@ -93,6 +113,7 @@ def test_register_rejects_non_matching_passwords(api_client, registration_data):
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert 'confirmed_password' in response.data
     assert not User.objects.exists()
+    assert not mail.outbox
 
 
 @pytest.mark.django_db
@@ -117,6 +138,7 @@ def test_register_rejects_existing_email_case_insensitively(
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert 'email' in response.data
     assert User.objects.count() == 1
+    assert not mail.outbox
 
 
 @pytest.mark.django_db
@@ -147,3 +169,4 @@ def test_register_rejects_invalid_required_fields(
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert field in response.data
     assert not User.objects.exists()
+    assert not mail.outbox

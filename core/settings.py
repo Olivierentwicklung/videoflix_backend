@@ -37,6 +37,15 @@ CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS', default='http://localhost:4200'
 ).split(',')
 
+FRONTEND_URL = os.environ.get(
+    'FRONTEND_URL',
+    default='http://127.0.0.1:5500',
+).rstrip('/')
+BACKEND_URL = os.environ.get(
+    'BACKEND_URL',
+    default='http://127.0.0.1:8000',
+).rstrip('/')
+
 # Application definition
 
 INSTALLED_APPS = [
