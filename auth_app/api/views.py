@@ -11,39 +11,25 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from auth_app.api.cookies import set_jwt_cookies
 from auth_app.api.schema.activation_schema import (
     ACTIVATION_DESCRIPTION,
     ACTIVATION_PARAMETERS,
     ACTIVATION_RESPONSES,
 )
 from auth_app.api.schema.base_schema import AUTH_TAG
+from auth_app.api.schema.login_schema import (
+    LOGIN_DESCRIPTION,
+    LOGIN_REQUEST_EXAMPLES,
+    LOGIN_RESPONSE_HEADERS,
+    LOGIN_RESPONSES,
+)
 from auth_app.api.schema.registration_schema import REGISTRATION_DESCRIPTION
-from auth_app.api.cookies import set_jwt_cookies
 from auth_app.api.serializers import LoginSerializer, RegistrationSerializer
 from auth_app.api.tokens import account_activation_token
 from auth_app.api.utils import send_activation_email
 
 User = get_user_model()
-
-
-class CookieTokenObtainPairView(TokenObtainPairView):
-    """Authenticate by email and return JWTs only in secure cookies."""
-
-    serializer_class = LoginSerializer
-    permission_classes = [AllowAny]
-    authentication_classes = []
-    throttle_classes = []
-
-    def post(self, request, *args, **kwargs):
-        """Issue both JWT cookies and bootstrap CSRF protection."""
-        response = super().post(request, *args, **kwargs)
-        access_token = response.data.pop('access')
-        refresh_token = response.data.pop('refresh')
-
-        set_jwt_cookies(response, access_token, refresh_token)
-        get_token(request)
-        response['Cache-Control'] = 'no-store'
-        return response
 
 
 class RegistrationView(APIView):
@@ -127,3 +113,32 @@ class ActivationView(APIView):
             {'message': 'Activation failed.'},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+
+class CookieTokenObtainPairView(TokenObtainPairView):
+    """Authenticate by email and return JWTs only in secure cookies."""
+
+    serializer_class = LoginSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = []
+
+    @extend_schema(
+        tags=AUTH_TAG,
+        request=LoginSerializer,
+        responses=LOGIN_RESPONSES,
+        parameters=LOGIN_RESPONSE_HEADERS,
+        examples=LOGIN_REQUEST_EXAMPLES,
+        description=LOGIN_DESCRIPTION,
+        auth=[],
+    )
+    def post(self, request, *args, **kwargs):
+        """Issue both JWT cookies and bootstrap CSRF protection."""
+        response = super().post(request, *args, **kwargs)
+        access_token = response.data.pop('access')  # type:ignore
+        refresh_token = response.data.pop('refresh')  # type:ignore
+
+        set_jwt_cookies(response, access_token, refresh_token)
+        get_token(request)  # type:ignore
+        response['Cache-Control'] = 'no-store'
+        return response
