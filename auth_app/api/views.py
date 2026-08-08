@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.middleware.csrf import get_token
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django_rq import get_queue
@@ -8,6 +9,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from auth_app.api.schema.activation_schema import (
     ACTIVATION_DESCRIPTION,
@@ -16,11 +18,32 @@ from auth_app.api.schema.activation_schema import (
 )
 from auth_app.api.schema.base_schema import AUTH_TAG
 from auth_app.api.schema.registration_schema import REGISTRATION_DESCRIPTION
-from auth_app.api.serializers import RegistrationSerializer
+from auth_app.api.cookies import set_jwt_cookies
+from auth_app.api.serializers import LoginSerializer, RegistrationSerializer
 from auth_app.api.tokens import account_activation_token
 from auth_app.api.utils import send_activation_email
 
 User = get_user_model()
+
+
+class CookieTokenObtainPairView(TokenObtainPairView):
+    """Authenticate by email and return JWTs only in secure cookies."""
+
+    serializer_class = LoginSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = []
+
+    def post(self, request, *args, **kwargs):
+        """Issue both JWT cookies and bootstrap CSRF protection."""
+        response = super().post(request, *args, **kwargs)
+        access_token = response.data.pop('access')
+        refresh_token = response.data.pop('refresh')
+
+        set_jwt_cookies(response, access_token, refresh_token)
+        get_token(request)
+        response['Cache-Control'] = 'no-store'
+        return response
 
 
 class RegistrationView(APIView):
