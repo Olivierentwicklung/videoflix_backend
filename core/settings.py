@@ -209,7 +209,7 @@ JAZZMIN_SETTINGS = {
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'videoflix   API Endpoint Dokumentation',
+    'TITLE': 'videoflix API Endpoint Dokumentation',
     'DESCRIPTION': 'Videoflix ist eine eigenständig entwickelte '
     'Videostreaming-Plattform im Stil von Netflix.',
     'VERSION': '1.0.0',

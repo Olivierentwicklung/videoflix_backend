@@ -13,6 +13,8 @@ class RegistrationSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
+        """Configure the user model fields exposed during registration."""
+
         model = User
         fields = ('email', 'password', 'confirmed_password')
         extra_kwargs = {

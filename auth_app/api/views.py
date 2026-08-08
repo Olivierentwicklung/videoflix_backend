@@ -8,6 +8,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from auth_app.api.schema.base_schema import AUTH_TAG
+from auth_app.api.schema.registration_schema import REGISTRATION_DESCRIPTION
 from auth_app.api.serializers import RegistrationSerializer
 from auth_app.api.utils import send_activation_email
 
@@ -19,10 +21,9 @@ class RegistrationView(APIView):
     throttle_classes = []
 
     @extend_schema(
+        tags=AUTH_TAG,
         request=RegistrationSerializer,
-        responses={201: RegistrationSerializer},
-        tags=['Authentication'],
-        description='Registriert einen neuen Benutzer im System.',
+        description=REGISTRATION_DESCRIPTION,
     )
     def post(self, request):
         """Register a user and enqueue the activation email with RQ."""
