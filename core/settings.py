@@ -37,6 +37,15 @@ CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS', default='http://localhost:4200'
 ).split(',')
 
+FRONTEND_URL = os.environ.get(
+    'FRONTEND_URL',
+    default='http://127.0.0.1:5500',
+).rstrip('/')
+BACKEND_URL = os.environ.get(
+    'BACKEND_URL',
+    default='http://127.0.0.1:8000',
+).rstrip('/')
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -169,6 +178,21 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    default='django.core.mail.backends.smtp.EmailBackend',
+)
+EMAIL_HOST = os.environ.get('EMAIL_HOST', default='localhost')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', default=25))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', default='False').lower() == 'true'
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', default='False').lower() == 'true'
+DEFAULT_FROM_EMAIL = os.environ.get(
+    'DEFAULT_FROM_EMAIL',
+    default='webmaster@localhost',
+)
+
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -185,7 +209,7 @@ JAZZMIN_SETTINGS = {
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'videoflix   API Endpoint Dokumentation',
+    'TITLE': 'videoflix API Endpoint Dokumentation',
     'DESCRIPTION': 'Videoflix ist eine eigenständig entwickelte '
     'Videostreaming-Plattform im Stil von Netflix.',
     'VERSION': '1.0.0',
