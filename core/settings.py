@@ -14,8 +14,8 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -258,7 +258,7 @@ JWT_COOKIE_DOMAIN = os.environ.get('JWT_COOKIE_DOMAIN') or None
 JWT_ACCESS_COOKIE_PATH = '/'
 JWT_REFRESH_COOKIE_PATH = os.environ.get(
     'JWT_REFRESH_COOKIE_PATH',
-    default='/api/token/refresh/',
+    default='/api/',
 )
 
 if JWT_COOKIE_SAMESITE not in {'Lax', 'Strict', 'None'}:

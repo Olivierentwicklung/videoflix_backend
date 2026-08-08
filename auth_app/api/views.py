@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.middleware.csrf import get_token
@@ -9,9 +10,12 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from auth_app.api.cookies import set_jwt_cookies
+from auth_app.api.authentication import CookieJWTAuthentication
+from auth_app.api.cookies import delete_jwt_cookies, set_jwt_cookies
 from auth_app.api.schema.activation_schema import (
     ACTIVATION_DESCRIPTION,
     ACTIVATION_PARAMETERS,
@@ -23,6 +27,11 @@ from auth_app.api.schema.login_schema import (
     LOGIN_REQUEST_EXAMPLES,
     LOGIN_RESPONSE_HEADERS,
     LOGIN_RESPONSES,
+)
+from auth_app.api.schema.logout_schema import (
+    LOGOUT_DESCRIPTION,
+    LOGOUT_PARAMETERS,
+    LOGOUT_RESPONSES,
 )
 from auth_app.api.schema.registration_schema import REGISTRATION_DESCRIPTION
 from auth_app.api.serializers import LoginSerializer, RegistrationSerializer
@@ -140,5 +149,57 @@ class CookieTokenObtainPairView(TokenObtainPairView):
 
         set_jwt_cookies(response, access_token, refresh_token)
         get_token(request)  # type:ignore
+        response['Cache-Control'] = 'no-store'
+        return response
+
+
+class LogoutView(APIView):
+    """Blacklist the refresh-token cookie and remove both JWT cookies."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = []
+
+    @extend_schema(
+        tags=AUTH_TAG,
+        request=None,
+        responses=LOGOUT_RESPONSES,
+        parameters=LOGOUT_PARAMETERS,
+        description=LOGOUT_DESCRIPTION,
+        auth=[],
+    )
+    def post(self, request):
+        """Invalidate the current refresh token without requiring access JWT."""
+        raw_refresh_token = request.COOKIES.get(
+            settings.JWT_REFRESH_COOKIE_NAME
+        )
+
+        if not raw_refresh_token:
+            return self._logout_response(
+                'Refresh token is required.',
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+        CookieJWTAuthentication.enforce_csrf(request)
+
+        try:
+            RefreshToken(raw_refresh_token).blacklist()
+        except TokenError:
+            return self._logout_response(
+                'Refresh token is invalid or expired.',
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+        return self._logout_response(
+            'Logout successful! All tokens will be deleted. '
+            'Refresh token is now invalid.',
+            status.HTTP_200_OK,
+        )
+
+    @staticmethod
+    def _logout_response(detail, response_status):
+        """Build a non-cacheable response that expires both JWT cookies."""
+        response = Response({'detail': detail}, status=response_status)
+        delete_jwt_cookies(response)
         response['Cache-Control'] = 'no-store'
         return response
