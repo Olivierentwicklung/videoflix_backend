@@ -44,6 +44,6 @@ mit HTTP-ONLY-COOKIES arbeiten. Dieser ist zur Demonstration und Information fü
 
 ### Extra Information:
 
--   No Extra Information
+-   Konto bleibt inaktiv bis Aktivierung via E-Mail.
 
 """
