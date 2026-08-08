@@ -96,7 +96,13 @@ def test_register_creates_inactive_user(
 
     assert activation_email.alternatives[0].mimetype == 'text/html'  # type:ignore
     assert f'href="{activation_url}"' in html_message
-    assert 'http://127.0.0.1:8000/static/images/logo.svg' in html_message
+    assert 'src="cid:videoflix-logo"' in html_message
+
+    assert len(activation_email.attachments) == 1
+    inline_logo = activation_email.attachments[0]
+    assert inline_logo.get_content_type() == 'image/png'  # type:ignore
+    assert inline_logo['Content-ID'] == '<videoflix-logo>'  # type:ignore
+    assert inline_logo.get_content_disposition() == 'inline'  # type:ignore
 
 
 @pytest.mark.django_db
