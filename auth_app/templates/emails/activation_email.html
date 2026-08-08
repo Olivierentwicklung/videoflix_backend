@@ -20,13 +20,16 @@
                     <tr>
                         <td>
                             <h1 style="margin: 0 0 20px; color: #2e3a59; font-size: 28px;">Activate your account</h1>
-                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 1.6;">Hello {{ email }},</p>
-                            <p style="margin: 0 0 28px; font-size: 16px; line-height: 1.6;">Thank you for joining Videoflix. Confirm your email address to activate your account.</p>
+                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 1.6;">Dear <span style="color: #2e3fff;"> {{ email }}</span>,</p>
+                            <p style="margin: 0 0 28px; font-size: 16px; line-height: 1.6;">Thank you for registering with <span style="color: #2e3fff;"> Videoflix</span>. To complete your registration and verify your email address, please click the link below:</p>
                             <p style="margin: 0 0 28px; text-align: center;">
-                                <a href="{{ activation_link }}" style="display: inline-block; border-radius: 8px; background-color: #2e3fff; color: #ffffff; font-size: 16px; font-weight: bold; padding: 14px 28px; text-decoration: none;">Activate account</a>
+                                <a href="{{ activation_link }}" style="display: inline-block; border-radius: 32px; background-color: #2e3fff; color: #ffffff; font-size: 16px; font-weight: bold; padding: 14px 28px; text-decoration: none;">Activate account</a>
                             </p>
-                            <p style="margin: 0 0 8px; font-size: 14px; line-height: 1.6;">If the button does not work, copy this link into your browser:</p>
-                            <p style="margin: 0; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6;"><a href="{{ activation_link }}" style="color: #2e3fff;">{{ activation_link }}</a></p>
+                            <p style="margin: 0 0 8px; font-size: 14px; line-height: 1.6;">If you did not create an account with us, please disregard this email.</p>
+                            <br>
+                            <p style="margin: 0 0 8px; font-size: 14px; line-height: 1.6;">Best regards,</p>
+                            <br>
+                            <p style="margin: 0 0 8px; font-size: 14px; line-height: 1.6;">Your Videoflix Team.</p>
                         </td>
                     </tr>
                 </table>
