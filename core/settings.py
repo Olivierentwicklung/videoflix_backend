@@ -41,6 +41,17 @@ FRONTEND_URL = os.environ.get(
     'FRONTEND_URL',
     default='http://127.0.0.1:5500',
 ).rstrip('/')
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        'CORS_ALLOWED_ORIGINS',
+        default=FRONTEND_URL,
+    ).split(',')
+    if origin.strip()
+]
+CORS_ALLOW_CREDENTIALS = (
+    os.environ.get('CORS_ALLOW_CREDENTIALS', default='True').lower() == 'true'
+)
 BACKEND_URL = os.environ.get(
     'BACKEND_URL',
     default='http://127.0.0.1:8000',
