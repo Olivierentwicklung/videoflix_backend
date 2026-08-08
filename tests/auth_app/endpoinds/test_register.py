@@ -89,14 +89,11 @@ def test_register_creates_inactive_user(
     assert activation_email.to == [registration_data['email']]
     assert activation_email.subject == 'Activate your Videoflix account'
     assert activation_url in activation_email.body
-    assert len(activation_email.alternatives) == 1
-    assert activation_email.alternatives[0].mimetype == 'text/html'
-    html_message = unescape(activation_email.alternatives[0].content)
+    assert len(activation_email.alternatives) == 1  # type:ignore
+    assert activation_email.alternatives[0].mimetype == 'text/html'  # type:ignore
+    html_message = unescape(activation_email.alternatives[0].content)  # type:ignore
     assert activation_url in html_message
-    assert (
-        'http://127.0.0.1:8000/static/images/logo.svg'
-        in html_message
-    )
+    assert 'http://127.0.0.1:8000/static/images/logo.svg' in html_message
 
 
 @pytest.mark.django_db
