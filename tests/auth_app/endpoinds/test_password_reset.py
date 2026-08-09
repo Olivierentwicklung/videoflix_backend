@@ -115,6 +115,33 @@ def test_password_reset_finds_email_case_insensitively(
 
 
 @pytest.mark.django_db
+def test_password_reset_sends_email_for_each_eligible_matching_user(
+    api_client,
+    fake_rq_queue,
+):
+    """Reuse one queue when multiple eligible accounts share an email."""
+    shared_email = 'shared@example.com'
+    for username in ('first-user', 'second-user'):
+        User.objects.create_user(  # type:ignore
+            username=username,
+            email=shared_email,
+            password='securepassword',
+            is_active=True,
+        )
+
+    response = api_client.post(
+        reverse('password_reset'),
+        {'email': shared_email},
+        format='json',
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data == SUCCESS_RESPONSE
+    assert len(mail.outbox) == 2
+    assert all(message.to == [shared_email] for message in mail.outbox)
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     ('email', 'is_active'),
     [
