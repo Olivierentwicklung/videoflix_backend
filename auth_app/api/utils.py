@@ -65,3 +65,22 @@ def send_activation_email(user, uid, token):
         recipient=user.email,
         inline_images={ACTIVATION_LOGO_CID: ACTIVATION_LOGO_PATH},
     )
+
+
+def send_password_reset_email(user, uid, token):
+    """Send a password-reset email to the given user."""
+    reset_link = (
+        f'{settings.FRONTEND_URL}/pages/auth/confirm_password.html'
+        f'?uid={uid}&token={token}'
+    )
+    return send_html_email(
+        subject='Reset your Videoflix password',
+        template_name='emails/password_reset_email.html',
+        context={
+            'reset_link': reset_link,
+            'email': user.email,
+            'site_url': settings.FRONTEND_URL,
+        },
+        recipient=user.email,
+        inline_images={ACTIVATION_LOGO_CID: ACTIVATION_LOGO_PATH},
+    )
