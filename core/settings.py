@@ -36,6 +36,7 @@ def env_bool(name, default=False):
         f'{name} must be one of: true, false, 1, 0, yes, no, on, off.'
     )
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -68,9 +69,7 @@ CORS_ALLOWED_ORIGINS = [
     ).split(',')
     if origin.strip()
 ]
-CORS_ALLOW_CREDENTIALS = (
-    env_bool('CORS_ALLOW_CREDENTIALS', default=True)
-)
+CORS_ALLOW_CREDENTIALS = env_bool('CORS_ALLOW_CREDENTIALS', default=True)
 BACKEND_URL = os.environ.get(
     'BACKEND_URL',
     default='http://127.0.0.1:8000',
@@ -93,6 +92,7 @@ INSTALLED_APPS = [
     'django_rq',
     'drf_spectacular',
     'auth_app.apps.AuthAppConfig',
+    'video_app.apps.VideoAppConfig',
 ]
 
 MIDDLEWARE = [
@@ -262,9 +262,7 @@ JWT_REFRESH_COOKIE_PATH = os.environ.get(
 )
 
 if JWT_COOKIE_SAMESITE not in {'Lax', 'Strict', 'None'}:
-    raise ImproperlyConfigured(
-        'JWT_COOKIE_SAMESITE must be one of: Lax, Strict, None.'
-    )
+    raise ImproperlyConfigured('JWT_COOKIE_SAMESITE must be one of: Lax, Strict, None.')
 if JWT_COOKIE_SAMESITE == 'None' and not JWT_COOKIE_SECURE:
     raise ImproperlyConfigured(
         'JWT_COOKIE_SECURE must be true when JWT_COOKIE_SAMESITE is None.'
