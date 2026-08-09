@@ -149,6 +149,31 @@ def test_password_reset_does_not_disclose_ineligible_accounts(
 
 
 @pytest.mark.django_db
+def test_password_reset_skips_user_with_unusable_password(
+    api_client,
+    fake_rq_queue,
+):
+    """Do not send a reset email when an active user has no usable password."""
+    user = User.objects.create_user(  # type:ignore
+        username='external@example.com',
+        email='external@example.com',
+        is_active=True,
+    )
+    user.set_unusable_password()
+    user.save(update_fields=['password'])
+
+    response = api_client.post(
+        reverse('password_reset'),
+        {'email': user.email},
+        format='json',
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data == SUCCESS_RESPONSE
+    assert not mail.outbox
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize('payload', [{}, {'email': ''}, {'email': 'invalid'}])
 def test_password_reset_rejects_missing_or_invalid_email(api_client, payload):
     """Reject requests that do not contain a syntactically valid email."""
