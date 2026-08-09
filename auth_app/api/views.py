@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
 from django.db import transaction
 from django.middleware.csrf import get_token
 from django.utils.encoding import force_bytes, force_str
@@ -35,6 +36,10 @@ from auth_app.api.schema.logout_schema import (
     LOGOUT_PARAMETERS,
     LOGOUT_RESPONSES,
 )
+from auth_app.api.schema.password_reset_schema import (
+    PASSWORD_RESET_DESCRIPTION,
+    PASSWORD_RESET_RESPONSES,
+)
 from auth_app.api.schema.registration_schema import (
     REGISTRATION_DESCRIPTION,
     REGISTRATION_RESPONSES,
@@ -44,11 +49,59 @@ from auth_app.api.schema.token_refresh_schema import (
     TOKEN_REFRESH_PARAMETERS,
     TOKEN_REFRESH_RESPONSES,
 )
-from auth_app.api.serializers import LoginSerializer, RegistrationSerializer
+from auth_app.api.serializers import (
+    LoginSerializer,
+    PasswordResetRequestSerializer,
+    RegistrationSerializer,
+)
 from auth_app.api.tokens import account_activation_token
-from auth_app.api.utils import send_activation_email
+from auth_app.api.utils import send_activation_email, send_password_reset_email
 
 User = get_user_model()
+
+
+class PasswordResetView(APIView):
+    """Queue password-reset emails without disclosing account existence."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = []
+
+    @extend_schema(
+        tags=AUTH_TAG,
+        request=PasswordResetRequestSerializer,
+        responses=PASSWORD_RESET_RESPONSES,
+        description=PASSWORD_RESET_DESCRIPTION,
+        auth=[],
+    )
+    def post(self, request):
+        """Validate an email and queue reset links for eligible accounts."""
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        users = User.objects.filter(  # type:ignore
+            email__iexact=serializer.validated_data['email'],  # type:ignore
+            is_active=True,
+        ).order_by('pk')
+
+        queue = None
+        for user in users:
+            if not user.has_usable_password():
+                continue
+
+            if queue is None:
+                queue = get_queue('default')
+
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            queue.enqueue(send_password_reset_email, user, uid, token)
+
+        return Response(
+            {
+                'detail': 'An email has been sent to reset your password.',
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class RegistrationView(APIView):

@@ -31,7 +31,7 @@ def send_html_email(
     email.attach_alternative(html_message, 'text/html')
 
     if inline_images:
-        email.mixed_subtype = 'related'
+        email.mixed_subtype = 'related'  # type:ignore
 
         for content_id, image_path in inline_images.items():
             with image_path.open('rb') as image_file:
@@ -51,14 +51,32 @@ def send_html_email(
 def send_activation_email(user, uid, token):
     """Send an account activation email to the given user."""
     activation_link = (
-        f'{settings.FRONTEND_URL}/pages/auth/activate.html'
-        f'?uid={uid}&token={token}'
+        f'{settings.FRONTEND_URL}/pages/auth/activate.html?uid={uid}&token={token}'
     )
     return send_html_email(
         subject='Activate your Videoflix account',
         template_name='emails/activation_email.html',
         context={
             'activation_link': activation_link,
+            'email': user.email,
+            'site_url': settings.FRONTEND_URL,
+        },
+        recipient=user.email,
+        inline_images={ACTIVATION_LOGO_CID: ACTIVATION_LOGO_PATH},
+    )
+
+
+def send_password_reset_email(user, uid, token):
+    """Send a password-reset email to the given user."""
+    reset_link = (
+        f'{settings.FRONTEND_URL}/pages/auth/confirm_password.html'
+        f'?uid={uid}&token={token}'
+    )
+    return send_html_email(
+        subject='Reset your Videoflix password',
+        template_name='emails/password_reset_email.html',
+        context={
+            'reset_link': reset_link,
             'email': user.email,
             'site_url': settings.FRONTEND_URL,
         },
