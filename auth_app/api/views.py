@@ -36,6 +36,10 @@ from auth_app.api.schema.logout_schema import (
     LOGOUT_PARAMETERS,
     LOGOUT_RESPONSES,
 )
+from auth_app.api.schema.password_reset_schema import (
+    PASSWORD_RESET_DESCRIPTION,
+    PASSWORD_RESET_RESPONSES,
+)
 from auth_app.api.schema.registration_schema import (
     REGISTRATION_DESCRIPTION,
     REGISTRATION_RESPONSES,
@@ -63,6 +67,13 @@ class PasswordResetView(APIView):
     authentication_classes = []
     throttle_classes = []
 
+    @extend_schema(
+        tags=AUTH_TAG,
+        request=PasswordResetRequestSerializer,
+        responses=PASSWORD_RESET_RESPONSES,
+        description=PASSWORD_RESET_DESCRIPTION,
+        auth=[],
+    )
     def post(self, request):
         """Validate an email and queue reset links for eligible accounts."""
         serializer = PasswordResetRequestSerializer(data=request.data)
