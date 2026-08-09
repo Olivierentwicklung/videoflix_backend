@@ -7,7 +7,9 @@ from rest_framework_simplejwt.settings import api_settings as simplejwt_settings
 User = get_user_model()
 
 
-class PasswordResetRequestSerializer(serializers.Serializer):
+class PasswordResetRequestSerializer(  # pylint: disable=abstract-method
+    serializers.Serializer
+):
     """Validate and normalize a password-reset email address."""
 
     email = serializers.EmailField(
