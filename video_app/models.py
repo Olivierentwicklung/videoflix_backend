@@ -6,7 +6,7 @@ from django.db import models
 class Category(models.Model):
     """Represent a category that can be assigned to multiple videos."""
 
-    class CategoryChoices(models.TextChoices):
+    class CategoryChoices(models.TextChoices):  # pylint: disable=too-many-ancestors
         """Define the category values supported by the application."""
 
         DRAMA = 'drama', 'Drama'
