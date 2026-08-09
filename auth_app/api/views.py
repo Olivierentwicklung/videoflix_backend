@@ -35,7 +35,10 @@ from auth_app.api.schema.logout_schema import (
     LOGOUT_PARAMETERS,
     LOGOUT_RESPONSES,
 )
-from auth_app.api.schema.registration_schema import REGISTRATION_DESCRIPTION
+from auth_app.api.schema.registration_schema import (
+    REGISTRATION_DESCRIPTION,
+    REGISTRATION_RESPONSES,
+)
 from auth_app.api.schema.token_refresh_schema import (
     TOKEN_REFRESH_DESCRIPTION,
     TOKEN_REFRESH_PARAMETERS,
@@ -52,12 +55,15 @@ class RegistrationView(APIView):
     """Create inactive user accounts and queue their activation emails."""
 
     permission_classes = [AllowAny]
+    authentication_classes = []
     throttle_classes = []
 
     @extend_schema(
         tags=AUTH_TAG,
         request=RegistrationSerializer,
+        responses=REGISTRATION_RESPONSES,
         description=REGISTRATION_DESCRIPTION,
+        auth=[],
     )
     def post(self, request):
         """Register a user and enqueue the activation email with RQ."""
@@ -84,6 +90,7 @@ class ActivationView(APIView):
     """Activate an inactive account using its emailed credentials."""
 
     permission_classes = [AllowAny]
+    authentication_classes = []
     throttle_classes = []
 
     @extend_schema(
@@ -92,6 +99,7 @@ class ActivationView(APIView):
         parameters=ACTIVATION_PARAMETERS,
         responses=ACTIVATION_RESPONSES,
         description=ACTIVATION_DESCRIPTION,
+        auth=[],
     )
     def get(self, request, uidb64, token):
         """Validate the UID and one-time token, then activate the account."""
