@@ -28,7 +28,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run pylint
-        run: pylint manage.py core auth_app
+        run: pylint manage.py core auth_app video_app
 
       - name: Run tests with coverage
         run: pytest --cov=. --cov-fail-under=98
