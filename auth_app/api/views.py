@@ -7,10 +7,12 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django_rq import get_queue
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -33,7 +35,15 @@ from auth_app.api.schema.logout_schema import (
     LOGOUT_PARAMETERS,
     LOGOUT_RESPONSES,
 )
-from auth_app.api.schema.registration_schema import REGISTRATION_DESCRIPTION
+from auth_app.api.schema.registration_schema import (
+    REGISTRATION_DESCRIPTION,
+    REGISTRATION_RESPONSES,
+)
+from auth_app.api.schema.token_refresh_schema import (
+    TOKEN_REFRESH_DESCRIPTION,
+    TOKEN_REFRESH_PARAMETERS,
+    TOKEN_REFRESH_RESPONSES,
+)
 from auth_app.api.serializers import LoginSerializer, RegistrationSerializer
 from auth_app.api.tokens import account_activation_token
 from auth_app.api.utils import send_activation_email
@@ -45,12 +55,15 @@ class RegistrationView(APIView):
     """Create inactive user accounts and queue their activation emails."""
 
     permission_classes = [AllowAny]
+    authentication_classes = []
     throttle_classes = []
 
     @extend_schema(
         tags=AUTH_TAG,
         request=RegistrationSerializer,
+        responses=REGISTRATION_RESPONSES,
         description=REGISTRATION_DESCRIPTION,
+        auth=[],
     )
     def post(self, request):
         """Register a user and enqueue the activation email with RQ."""
@@ -77,6 +90,7 @@ class ActivationView(APIView):
     """Activate an inactive account using its emailed credentials."""
 
     permission_classes = [AllowAny]
+    authentication_classes = []
     throttle_classes = []
 
     @extend_schema(
@@ -85,6 +99,7 @@ class ActivationView(APIView):
         parameters=ACTIVATION_PARAMETERS,
         responses=ACTIVATION_RESPONSES,
         description=ACTIVATION_DESCRIPTION,
+        auth=[],
     )
     def get(self, request, uidb64, token):
         """Validate the UID and one-time token, then activate the account."""
@@ -153,6 +168,64 @@ class CookieTokenObtainPairView(TokenObtainPairView):
         return response
 
 
+class CookieTokenRefreshView(APIView):
+    """Rotate JWTs using only the HTTP-only refresh-token cookie."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = []
+
+    @extend_schema(
+        tags=AUTH_TAG,
+        request=None,
+        responses=TOKEN_REFRESH_RESPONSES,
+        parameters=TOKEN_REFRESH_PARAMETERS,
+        description=TOKEN_REFRESH_DESCRIPTION,
+        auth=[],
+    )
+    def post(self, request):
+        """Validate and rotate the refresh token, then issue fresh cookies."""
+        raw_refresh_token = request.COOKIES.get(settings.JWT_REFRESH_COOKIE_NAME)
+
+        if not raw_refresh_token:
+            return self._error_response(
+                'Refresh token is required.',
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+        CookieJWTAuthentication.enforce_csrf(request)
+
+        serializer = TokenRefreshSerializer(data={'refresh': raw_refresh_token})
+        try:
+            serializer.is_valid(raise_exception=True)
+        except (AuthenticationFailed, TokenError, User.DoesNotExist):
+            return self._error_response(
+                'Refresh token is invalid or expired.',
+                status.HTTP_401_UNAUTHORIZED,
+            )
+
+        access_token = serializer.validated_data['access']  # type:ignore
+        refresh_token = serializer.validated_data['refresh']  # type:ignore
+        response = Response(
+            {
+                'detail': 'Token refreshed',
+                'access': access_token,
+            },
+            status=status.HTTP_200_OK,
+        )
+        set_jwt_cookies(response, access_token, refresh_token)
+        response['Cache-Control'] = 'no-store'
+        return response
+
+    @staticmethod
+    def _error_response(detail, response_status):
+        """Return a non-cacheable error and expire stale JWT cookies."""
+        response = Response({'detail': detail}, status=response_status)
+        delete_jwt_cookies(response)
+        response['Cache-Control'] = 'no-store'
+        return response
+
+
 class LogoutView(APIView):
     """Blacklist the refresh-token cookie and remove both JWT cookies."""
 
@@ -170,9 +243,7 @@ class LogoutView(APIView):
     )
     def post(self, request):
         """Invalidate the current refresh token without requiring access JWT."""
-        raw_refresh_token = request.COOKIES.get(
-            settings.JWT_REFRESH_COOKIE_NAME
-        )
+        raw_refresh_token = request.COOKIES.get(settings.JWT_REFRESH_COOKIE_NAME)
 
         if not raw_refresh_token:
             return self._logout_response(

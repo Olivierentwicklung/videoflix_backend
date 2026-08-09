@@ -1,3 +1,10 @@
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiResponse,
+    inline_serializer,
+)
+from rest_framework import serializers
+
 REGISTRATION_DESCRIPTION = """
 
 **Description**: Registriert einen neuen Benutzer im System.
@@ -47,3 +54,79 @@ mit HTTP-ONLY-COOKIES arbeiten. Dieser ist zur Demonstration und Information fü
 -   Konto bleibt inaktiv bis Aktivierung via E-Mail.
 
 """
+
+REGISTRATION_USER_RESPONSE = inline_serializer(
+    name='RegistrationUserResponse',
+    fields={
+        'id': serializers.IntegerField(),
+        'email': serializers.EmailField(),
+    },
+)
+
+REGISTRATION_SUCCESS_RESPONSE = inline_serializer(
+    name='RegistrationSuccessResponse',
+    fields={
+        'user': REGISTRATION_USER_RESPONSE,
+        'token': serializers.CharField(),
+    },
+)
+
+REGISTRATION_VALIDATION_ERROR_RESPONSE = inline_serializer(
+    name='RegistrationValidationErrorResponse',
+    fields={
+        'email': serializers.ListField(
+            child=serializers.CharField(),
+            required=False,
+        ),
+        'password': serializers.ListField(
+            child=serializers.CharField(),
+            required=False,
+        ),
+        'confirmed_password': serializers.ListField(
+            child=serializers.CharField(),
+            required=False,
+        ),
+        'non_field_errors': serializers.ListField(
+            child=serializers.CharField(),
+            required=False,
+        ),
+    },
+)
+
+REGISTRATION_RESPONSES = {
+    201: OpenApiResponse(
+        response=REGISTRATION_SUCCESS_RESPONSE,
+        description='Benutzer erfolgreich registriert.',
+        examples=[
+            OpenApiExample(
+                name='Registration successful',
+                value={
+                    'user': {
+                        'id': 1,
+                        'email': 'user@example.com',
+                    },
+                    'token': 'activation_token',
+                },
+                response_only=True,
+            )
+        ],
+    ),
+    400: OpenApiResponse(
+        response=REGISTRATION_VALIDATION_ERROR_RESPONSE,
+        description='Ungueltige oder bereits verwendete Registrierungsdaten.',
+        examples=[
+            OpenApiExample(
+                name='Email already registered',
+                value={
+                    'email': [
+                        'A user with this email address already exists.'
+                    ]
+                },
+                response_only=True,
+            )
+        ],
+    ),
+    500: OpenApiResponse(
+        description='Unerwarteter interner Serverfehler.',
+    ),
+}
