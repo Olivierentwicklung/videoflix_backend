@@ -1,3 +1,6 @@
+# Pytest injects fixtures through function arguments with matching names.
+# pylint: disable=redefined-outer-name
+
 from datetime import datetime, timedelta
 
 import pytest
