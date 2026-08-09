@@ -14,6 +14,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.token_blacklist.models import (
+    BlacklistedToken,
+    OutstandingToken,
+)
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -36,6 +40,11 @@ from auth_app.api.schema.logout_schema import (
     LOGOUT_PARAMETERS,
     LOGOUT_RESPONSES,
 )
+from auth_app.api.schema.password_confirm_schema import (
+    PASSWORD_CONFIRM_DESCRIPTION,
+    PASSWORD_CONFIRM_PARAMETERS,
+    PASSWORD_CONFIRM_RESPONSES,
+)
 from auth_app.api.schema.password_reset_schema import (
     PASSWORD_RESET_DESCRIPTION,
     PASSWORD_RESET_RESPONSES,
@@ -51,6 +60,7 @@ from auth_app.api.schema.token_refresh_schema import (
 )
 from auth_app.api.serializers import (
     LoginSerializer,
+    PasswordConfirmSerializer,
     PasswordResetRequestSerializer,
     RegistrationSerializer,
 )
@@ -58,6 +68,65 @@ from auth_app.api.tokens import account_activation_token
 from auth_app.api.utils import send_activation_email, send_password_reset_email
 
 User = get_user_model()
+
+
+class PasswordConfirmView(APIView):
+    """Set a new password using an emailed one-time reset token."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = []
+
+    @extend_schema(
+        tags=AUTH_TAG,
+        request=PasswordConfirmSerializer,
+        parameters=PASSWORD_CONFIRM_PARAMETERS,
+        responses=PASSWORD_CONFIRM_RESPONSES,
+        description=PASSWORD_CONFIRM_DESCRIPTION,
+        auth=[],
+    )
+    def post(self, request, uidb64, token):
+        """Validate reset credentials, update the password, and revoke sessions."""
+        try:
+            user_id = force_str(urlsafe_base64_decode(uidb64))
+        except (TypeError, ValueError, OverflowError, UnicodeDecodeError):
+            return self._invalid_link_response()
+
+        with transaction.atomic():
+            try:
+                user = User.objects.select_for_update().get(  # type:ignore
+                    pk=user_id,
+                    is_active=True,
+                )
+            except (User.DoesNotExist, TypeError, ValueError, OverflowError):
+                return self._invalid_link_response()
+
+            if not default_token_generator.check_token(user, token):
+                return self._invalid_link_response()
+
+            serializer = PasswordConfirmSerializer(
+                data=request.data,
+                context={'user': user},
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+            outstanding_tokens = OutstandingToken.objects.filter(user=user)
+            for outstanding_token in outstanding_tokens.iterator():
+                BlacklistedToken.objects.get_or_create(token=outstanding_token)
+
+        return Response(
+            {'detail': 'Your Password has been successfully reset.'},
+            status=status.HTTP_200_OK,
+        )
+
+    @staticmethod
+    def _invalid_link_response():
+        """Return one response for every unusable password-reset link."""
+        return Response(
+            {'detail': 'Password reset link is invalid or expired.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class PasswordResetView(APIView):

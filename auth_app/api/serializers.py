@@ -1,4 +1,6 @@
 from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -21,6 +23,52 @@ class PasswordResetRequestSerializer(  # pylint: disable=abstract-method
     def validate_email(self, value):
         """Apply the user model's standard email normalization."""
         return User.objects.normalize_email(value)  # type:ignore
+
+
+class PasswordConfirmSerializer(  # pylint: disable=abstract-method
+    serializers.Serializer
+):
+    """Validate and apply a new password for a password-reset user."""
+
+    new_password = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        write_only=True,
+        trim_whitespace=False,
+        style={'input_type': 'password'},
+    )
+    confirm_password = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        write_only=True,
+        trim_whitespace=False,
+        style={'input_type': 'password'},
+    )
+
+    def validate(self, attrs):
+        """Require matching fields and enforce Django's password policy."""
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError(
+                {'confirm_password': 'Passwords do not match.'}
+            )
+
+        user = self.context['user']
+        try:
+            validate_password(attrs['new_password'], user=user)
+        except DjangoValidationError as error:
+            raise serializers.ValidationError(
+                {'new_password': error.messages}
+            ) from error
+
+        return attrs
+
+    def save(self, **kwargs):
+        """Hash and persist the validated password for the target user."""
+        del kwargs
+        user = self.context['user']
+        user.set_password(self.validated_data['new_password'])  # type:ignore
+        user.save(update_fields=['password'])
+        return user
 
 
 class LoginSerializer(TokenObtainPairSerializer):  # pylint: disable=abstract-method
