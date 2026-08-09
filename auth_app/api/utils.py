@@ -31,7 +31,7 @@ def send_html_email(
     email.attach_alternative(html_message, 'text/html')
 
     if inline_images:
-        email.mixed_subtype = 'related'
+        email.mixed_subtype = 'related'  # type:ignore
 
         for content_id, image_path in inline_images.items():
             with image_path.open('rb') as image_file:
@@ -51,8 +51,7 @@ def send_html_email(
 def send_activation_email(user, uid, token):
     """Send an account activation email to the given user."""
     activation_link = (
-        f'{settings.FRONTEND_URL}/pages/auth/activate.html'
-        f'?uid={uid}&token={token}'
+        f'{settings.FRONTEND_URL}/pages/auth/activate.html?uid={uid}&token={token}'
     )
     return send_html_email(
         subject='Activate your Videoflix account',

@@ -1,3 +1,4 @@
+from html import unescape
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -60,7 +61,7 @@ def active_user():
 
 def extract_reset_credentials(email):
     """Extract the UID and token query parameters from a reset email."""
-    html_message = email.alternatives[0].content  # type:ignore
+    html_message = unescape(email.alternatives[0].content)  # type:ignore
     marker = 'href="'
     link_start = html_message.index(marker) + len(marker)
     link_end = html_message.index('"', link_start)
