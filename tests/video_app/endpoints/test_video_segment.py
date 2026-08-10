@@ -167,6 +167,20 @@ def test_video_segment_returns_404_when_path_is_not_a_file(
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
+def test_video_segment_returns_404_when_file_cannot_be_opened(
+    authenticated_client,
+    video,
+    mocker,
+):
+    """Handle a filesystem error between checking and opening the segment."""
+    write_segment(video.pk)
+    mocker.patch.object(Path, 'open', side_effect=OSError('segment unavailable'))
+
+    response = authenticated_client.get(segment_url(video.pk))
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
 def test_video_segment_returns_404_for_unsupported_resolution(
     authenticated_client,
     video,
