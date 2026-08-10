@@ -1,7 +1,7 @@
 """Views for the video catalogue API."""
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 from django.conf import settings
 from django.http import FileResponse
@@ -132,11 +132,7 @@ class VideoSegmentView(APIView):
             raise NotFound()
 
         segment_path = (
-            Path(settings.MEDIA_ROOT)
-            / 'videos'
-            / str(movie_id)
-            / resolution
-            / segment
+            Path(settings.MEDIA_ROOT) / 'videos' / str(movie_id) / resolution / segment
         )
         if not segment_path.is_file():
             raise NotFound()
