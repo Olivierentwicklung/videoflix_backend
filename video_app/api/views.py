@@ -5,8 +5,8 @@ from pathlib import Path
 from django.conf import settings
 from django.http import FileResponse
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from rest_framework.generics import ListAPIView
 from rest_framework.exceptions import NotFound
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
