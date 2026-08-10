@@ -4,6 +4,11 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, inline_serializer
 from rest_framework import serializers
 
+from video_app.api.constants import (
+    HLS_MANIFEST_CONTENT_TYPE,
+    SUPPORTED_VIDEO_RESOLUTIONS,
+)
+
 VIDEO_MANIFEST_DESCRIPTION = """
 **Description**: Gibt die HLS-Master-Playlist für einen bestimmten Film
  und eine gewählte Auflösung zurück.
@@ -65,7 +70,7 @@ VIDEO_MANIFEST_PARAMETERS = [
         location=OpenApiParameter.PATH,
         description='Gewünschte Auflösung.',
         required=True,
-        enum=['480p', '720p', '1080p'],
+        enum=SUPPORTED_VIDEO_RESOLUTIONS,
     ),
 ]
 
@@ -75,7 +80,7 @@ VIDEO_MANIFEST_ERROR_RESPONSE = inline_serializer(
 )
 
 VIDEO_MANIFEST_RESPONSES = {
-    (200, 'application/vnd.apple.mpegurl'): OpenApiResponse(
+    (200, HLS_MANIFEST_CONTENT_TYPE): OpenApiResponse(
         response=OpenApiTypes.BINARY,
         description='Manifest erfolgreich geliefert.',
     ),

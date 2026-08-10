@@ -10,6 +10,10 @@ from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
+from video_app.api.constants import (
+    HLS_MANIFEST_CONTENT_TYPE,
+    SUPPORTED_VIDEO_RESOLUTIONS,
+)
 from video_app.api.schema.base_schema import (
     VIDEO_TAG,
 )
@@ -49,7 +53,7 @@ class VideoManifestView(APIView):
 
     permission_classes = [IsAuthenticated]
     throttle_classes = []
-    supported_resolutions = frozenset({'480p', '720p', '1080p'})
+    supported_resolutions = frozenset(SUPPORTED_VIDEO_RESOLUTIONS)
 
     @extend_schema(
         tags=VIDEO_TAG,
@@ -81,5 +85,5 @@ class VideoManifestView(APIView):
 
         return FileResponse(
             manifest_path.open('rb'),
-            content_type='application/vnd.apple.mpegurl',
+            content_type=HLS_MANIFEST_CONTENT_TYPE,
         )
