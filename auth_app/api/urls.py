@@ -1,3 +1,5 @@
+"""URL routes for authentication API endpoints."""
+
 from django.urls import path
 
 from auth_app.api.views import (

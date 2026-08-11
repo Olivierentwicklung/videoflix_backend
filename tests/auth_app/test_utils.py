@@ -1,3 +1,5 @@
+"""Tests for authentication email utilities."""
+
 from django.core import mail
 
 from auth_app.api.utils import send_html_email

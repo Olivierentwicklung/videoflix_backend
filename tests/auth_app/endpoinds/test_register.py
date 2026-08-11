@@ -1,3 +1,5 @@
+"""Tests for user registration endpoints."""
+
 from html import unescape
 
 import pytest
@@ -30,6 +32,7 @@ def fake_rq_queue(monkeypatch):
     )
 
     def get_queue(*args, **kwargs):
+        """Return the synchronous fake RQ queue."""
         del args, kwargs
         return queue
 

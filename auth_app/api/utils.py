@@ -1,3 +1,5 @@
+"""Email helpers for authentication workflows."""
+
 from email.mime.image import MIMEImage
 from html import unescape
 from pathlib import Path

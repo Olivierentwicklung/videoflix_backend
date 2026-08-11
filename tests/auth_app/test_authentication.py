@@ -1,3 +1,5 @@
+"""Tests for cookie and header JWT authentication."""
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.middleware.csrf import get_token

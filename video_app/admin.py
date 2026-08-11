@@ -10,6 +10,8 @@ class VideoAdminForm(forms.ModelForm):
     """Require an original upload when an administrator creates a video."""
 
     class Meta:
+        """Bind the form to all administrator-editable video fields."""
+
         model = Video
         fields = '__all__'
 

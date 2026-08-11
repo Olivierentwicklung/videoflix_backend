@@ -1,3 +1,5 @@
+"""Tests for user logout endpoints."""
+
 from datetime import timedelta
 
 import pytest
