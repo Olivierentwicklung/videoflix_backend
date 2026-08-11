@@ -123,6 +123,26 @@ def test_video_master_manifest_returns_stored_file(authenticated_client, video):
     assert response_body(response) == MANIFEST_CONTENT
 
 
+def test_video_master_manifest_returns_404_for_unknown_video(authenticated_client):
+    """Require a catalogue record for a master manifest."""
+    response = authenticated_client.get(
+        reverse('video-master-manifest', kwargs={'movie_id': 999})
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_video_master_manifest_returns_404_when_file_is_missing(
+    authenticated_client, video
+):
+    """Return not found until the processing job creates the master manifest."""
+    response = authenticated_client.get(
+        reverse('video-master-manifest', kwargs={'movie_id': video.pk})
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
 def test_video_manifest_supports_configured_jwt_cookie(video, access_token):
     """Authenticate manifest requests through the configured access cookie."""
     write_manifest(video.pk)

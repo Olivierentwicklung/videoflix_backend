@@ -1,6 +1,8 @@
 """Tests for the video application's Django admin configuration."""
 
+import pytest
 from django.contrib import admin
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from video_app.admin import VideoAdminForm
 from video_app.models import Category, Video
@@ -57,3 +59,26 @@ def test_video_admin_requires_original_for_new_video():
 
     assert not form.is_valid()
     assert 'original' in form.errors
+
+
+@pytest.mark.django_db
+def test_video_admin_accepts_original_for_new_video():
+    """Accept a complete administrator upload form."""
+    category = Category.objects.create(name=Category.CategoryChoices.DRAMA)
+    form = VideoAdminForm(
+        data={
+            'title': 'Movie',
+            'description': 'Description',
+            'category': category.pk,
+            'processing_status': Video.ProcessingStatus.PENDING,
+        },
+        files={
+            'original': SimpleUploadedFile(
+                'movie.mp4',
+                b'video-content',
+                content_type='video/mp4',
+            )
+        },
+    )
+
+    assert form.is_valid(), form.errors

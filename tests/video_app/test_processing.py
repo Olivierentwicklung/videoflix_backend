@@ -214,6 +214,49 @@ def test_missing_ffmpeg_is_recorded(category, mocker):
     assert 'FFmpeg executable was not found' in video.processing_error
 
 
+def test_missing_ffprobe_is_recorded(category, mocker):
+    video = create_video(category)
+    mocker.patch('video_app.tasks.subprocess.run', side_effect=FileNotFoundError())
+
+    process_video(video.pk)
+
+    video.refresh_from_db()
+    assert video.processing_status == Video.ProcessingStatus.FAILED
+    assert 'FFprobe executable was not found' in video.processing_error
+
+
+def test_ffprobe_failure_is_recorded(category, mocker):
+    video = create_video(category)
+    mocker.patch(
+        'video_app.tasks.subprocess.run',
+        return_value=CompletedProcess([], 1, '', 'probe failed'),
+    )
+
+    process_video(video.pk)
+
+    video.refresh_from_db()
+    assert video.processing_status == Video.ProcessingStatus.FAILED
+    assert 'probe failed' in video.processing_error
+
+
+def test_processing_missing_database_record_is_a_noop():
+    assert process_video(999) is None
+
+
+def test_processing_record_without_original_is_failed(category):
+    video = Video.objects.create(
+        title='Legacy movie',
+        description='Description',
+        category=category,
+    )
+
+    process_video(video.pk)
+
+    video.refresh_from_db()
+    assert video.processing_status == Video.ProcessingStatus.FAILED
+    assert video.processing_error == 'The original video file is missing.'
+
+
 def test_missing_expected_output_is_recorded(category, mocker):
     video = create_video(category)
     run_mock = mocker.patch('video_app.tasks.subprocess.run')
