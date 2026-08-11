@@ -1,3 +1,5 @@
+"""OpenAPI documentation for user registration."""
+
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiResponse,

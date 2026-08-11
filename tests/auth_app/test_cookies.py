@@ -1,3 +1,5 @@
+"""Tests for authentication cookie helpers."""
+
 from rest_framework.response import Response
 
 from auth_app.api.cookies import delete_jwt_cookies

@@ -1,3 +1,5 @@
+"""Tests for JWT refresh endpoints."""
+
 from datetime import timedelta
 
 import pytest

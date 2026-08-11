@@ -1,3 +1,5 @@
+"""Fast isolated Django settings used by the automated test suite."""
+
 from .settings import *  # noqa: F401, F403
 
 DATABASES = {

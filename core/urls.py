@@ -15,6 +15,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import (
@@ -22,6 +24,13 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+
+
+def development_media_urlpatterns():
+    """Serve uploaded media through Django only in development."""
+    if not settings.DEBUG:
+        return []
+    return static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -40,3 +49,5 @@ urlpatterns = [
         name='redoc',
     ),
 ]
+
+urlpatterns += development_media_urlpatterns()

@@ -1,3 +1,5 @@
+"""Token generators used by authentication workflows."""
+
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 

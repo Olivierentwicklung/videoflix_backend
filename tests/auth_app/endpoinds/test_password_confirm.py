@@ -1,3 +1,5 @@
+"""Tests for password confirmation endpoints."""
+
 # Pytest injects fixtures through function arguments with matching names.
 # pylint: disable=redefined-outer-name
 

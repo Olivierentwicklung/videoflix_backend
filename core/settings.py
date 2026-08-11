@@ -201,6 +201,8 @@ STATIC_ROOT = BASE_DIR / 'static'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+FFMPEG_BINARY = os.environ.get('FFMPEG_BINARY', default='ffmpeg')
+FFPROBE_BINARY = os.environ.get('FFPROBE_BINARY', default='ffprobe')
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 

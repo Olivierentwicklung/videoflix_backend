@@ -1,9 +1,7 @@
 """Views for the video catalogue API."""
 
 import re
-from pathlib import Path
 
-from django.conf import settings
 from django.http import FileResponse
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.exceptions import NotFound
@@ -77,19 +75,43 @@ class VideoManifestView(APIView):
         if resolution not in self.supported_resolutions:
             raise NotFound()
 
-        if not Video.objects.filter(pk=movie_id).exists():
-            raise NotFound()
+        try:
+            video = Video.objects.get(pk=movie_id)
+        except Video.DoesNotExist:
+            raise NotFound() from None
 
-        manifest_path = (
-            Path(settings.MEDIA_ROOT)
-            / 'videos'
-            / str(movie_id)
-            / resolution
-            / 'index.m3u8'
-        )
+        manifest_path = video.variant_playlist_path(resolution)
         if not manifest_path.is_file():
             raise NotFound()
 
+        return FileResponse(
+            manifest_path.open('rb'),
+            content_type=HLS_MANIFEST_CONTENT_TYPE,
+        )
+
+
+class VideoMasterManifestView(APIView):
+    """Stream a generated HLS multivariant playlist."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = []
+
+    @extend_schema(
+        tags=VIDEO_TAG,
+        summary='HLS-Master-Playlist abrufen',
+        request=None,
+        responses=VIDEO_MANIFEST_RESPONSES,
+    )
+    def get(self, request, movie_id: int):
+        """Return the master manifest when its ready file exists."""
+        del request
+        try:
+            video = Video.objects.get(pk=movie_id)
+        except Video.DoesNotExist:
+            raise NotFound() from None
+        manifest_path = video.master_playlist_path
+        if not manifest_path.is_file():
+            raise NotFound()
         return FileResponse(
             manifest_path.open('rb'),
             content_type=HLS_MANIFEST_CONTENT_TYPE,
@@ -102,7 +124,7 @@ class VideoSegmentView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_classes = []
     supported_resolutions = frozenset(SUPPORTED_VIDEO_RESOLUTIONS)
-    segment_filename_pattern = re.compile(r'[0-9]+\.ts')
+    segment_filename_pattern = re.compile(r'(?:segment_)?[0-9]+\.ts')
 
     @extend_schema(
         tags=VIDEO_TAG,
@@ -128,12 +150,12 @@ class VideoSegmentView(APIView):
         if self.segment_filename_pattern.fullmatch(segment) is None:
             raise NotFound()
 
-        if not Video.objects.filter(pk=movie_id).exists():
-            raise NotFound()
+        try:
+            video = Video.objects.get(pk=movie_id)
+        except Video.DoesNotExist:
+            raise NotFound() from None
 
-        segment_path = (
-            Path(settings.MEDIA_ROOT) / 'videos' / str(movie_id) / resolution / segment
-        )
+        segment_path = video.output_directory / resolution / segment
         if not segment_path.is_file():
             raise NotFound()
 

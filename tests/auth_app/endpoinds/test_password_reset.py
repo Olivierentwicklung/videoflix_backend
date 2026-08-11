@@ -1,3 +1,5 @@
+"""Tests for password reset request endpoints."""
+
 from html import unescape
 from urllib.parse import parse_qs, urlparse
 
@@ -36,6 +38,7 @@ def fake_rq_queue(monkeypatch):
     )
 
     def get_queue(*args, **kwargs):
+        """Return the synchronous fake RQ queue."""
         del args, kwargs
         return queue
 

@@ -1,3 +1,5 @@
+"""OpenAPI documentation for password reset requests."""
+
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiResponse,

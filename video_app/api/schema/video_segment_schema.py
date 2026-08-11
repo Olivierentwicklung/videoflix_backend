@@ -81,7 +81,7 @@ VIDEO_SEGMENT_PARAMETERS = [
         location=OpenApiParameter.PATH,
         description='Numerischer MPEG-TS-Segmentdateiname (z.B. `000.ts`).',
         required=True,
-        pattern=r'^[0-9]+\.ts$',
+        pattern=r'^(?:segment_)?[0-9]+\.ts$',
     ),
 ]
 

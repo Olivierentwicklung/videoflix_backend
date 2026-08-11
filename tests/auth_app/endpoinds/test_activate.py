@@ -1,3 +1,5 @@
+"""Tests for account activation endpoints."""
+
 from datetime import datetime, timedelta
 
 import pytest
