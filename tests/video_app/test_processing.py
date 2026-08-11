@@ -6,6 +6,7 @@ from subprocess import CompletedProcess
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 
+from video_app.api.constants import SUPPORTED_VIDEO_RESOLUTIONS
 from video_app.models import Category, Video
 from video_app.tasks import process_video
 
@@ -160,6 +161,10 @@ def test_processing_builds_expected_ffmpeg_commands_and_marks_ready(
     assert hls_command[hls_command.index('-hls_playlist_type') + 1] == 'vod'
     assert hls_command[hls_command.index('-hls_flags') + 1] == 'independent_segments'
     assert hls_command[hls_command.index('-master_pl_name') + 1] == 'master.m3u8'
+    assert hls_command[hls_command.index('-var_stream_map') + 1] == ' '.join(
+        f'v:{index},a:{index},name:{resolution}'
+        for index, resolution in enumerate(SUPPORTED_VIDEO_RESOLUTIONS)
+    )
     assert hls_command[-1].endswith('%v\\index.m3u8') or hls_command[-1].endswith(
         '%v/index.m3u8'
     )

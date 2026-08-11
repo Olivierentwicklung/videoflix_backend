@@ -4,9 +4,9 @@ import subprocess
 
 from django.conf import settings
 
+from video_app.api.constants import SUPPORTED_VIDEO_RESOLUTIONS
 from video_app.models import Video
 
-RESOLUTIONS = ('480p', '720p', '1080p')
 ERROR_LIMIT = 4000
 
 
@@ -80,6 +80,10 @@ def _thumbnail_command(video):
 def _hls_command(video, source_has_audio):
     """Build one aligned adaptive HLS transcode command."""
     output_directory = video.output_directory
+    variant_stream_map = ' '.join(
+        f'v:{index},a:{index},name:{resolution}'
+        for index, resolution in enumerate(SUPPORTED_VIDEO_RESOLUTIONS)
+    )
     filter_graph = (
         '[0:v]split=3[v480src][v720src][v1080src];'
         '[v480src]scale=-2:480,setsar=1[v480];'
@@ -183,7 +187,7 @@ def _hls_command(video, source_has_audio):
             '-master_pl_name',
             'master.m3u8',
             '-var_stream_map',
-            'v:0,a:0,name:480p v:1,a:1,name:720p v:2,a:2,name:1080p',
+            variant_stream_map,
             str(output_directory / '%v' / 'index.m3u8'),
         ]
     )
@@ -193,9 +197,12 @@ def _hls_command(video, source_has_audio):
 def _validate_outputs(video):
     """Ensure FFmpeg produced every public artifact before publishing ready."""
     expected = [video.thumbnail_output_path, video.master_playlist_path]
-    expected.extend(video.variant_playlist_path(value) for value in RESOLUTIONS)
+    expected.extend(
+        video.variant_playlist_path(value)
+        for value in SUPPORTED_VIDEO_RESOLUTIONS
+    )
     missing = [str(path) for path in expected if not path.is_file()]
-    for resolution in RESOLUTIONS:
+    for resolution in SUPPORTED_VIDEO_RESOLUTIONS:
         if not any((video.output_directory / resolution).glob('segment_*.ts')):
             missing.append(str(video.output_directory / resolution / 'segment_*.ts'))
     if missing:
@@ -228,7 +235,7 @@ def process_video(video_id):
         if not video.original:
             raise VideoProcessingError('The original video file is missing.')
         video.output_directory.mkdir(parents=True, exist_ok=True)
-        for resolution in RESOLUTIONS:
+        for resolution in SUPPORTED_VIDEO_RESOLUTIONS:
             (video.output_directory / resolution).mkdir(parents=True, exist_ok=True)
         source_has_audio = _source_has_audio(video)
         _run_ffmpeg(_thumbnail_command(video))
