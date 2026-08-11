@@ -265,12 +265,11 @@ Authorization: Bearer <your_access_token>
 
 ## 🎬 Video Endpoints
 
-| Method | Endpoint                                          | Description                           |
-| ------ | ------------------------------------------------- | ------------------------------------- |
-| GET    | `/api/video/`                                     | List all videos in the catalogue      |
-| GET    | `/api/video/{movie_id}/master.m3u8`               | Retrieve the adaptive master playlist |
-| GET    | `/api/video/{movie_id}/{resolution}/index.m3u8`   | Retrieve one HLS variant playlist     |
-| GET    | `/api/video/{movie_id}/{resolution}/{segment}.ts` | Stream one MPEG-TS video segment      |
+| Method | Endpoint                                          | Description                       |
+| ------ | ------------------------------------------------- | --------------------------------- |
+| GET    | `/api/video/`                                     | List all videos in the catalogue  |
+| GET    | `/api/video/{movie_id}/{resolution}/index.m3u8`   | Retrieve one HLS variant playlist |
+| GET    | `/api/video/{movie_id}/{resolution}/{segment}.ts` | Stream one MPEG-TS video segment  |
 
 All video endpoints require authentication. Supported resolution values are `480p`, `720p`, and `1080p`. Catalogue and streaming endpoints are read-only; video records and uploads are managed through Django Admin.
 
