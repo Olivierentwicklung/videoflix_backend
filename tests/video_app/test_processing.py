@@ -16,6 +16,7 @@ pytestmark = pytest.mark.django_db
 def temporary_media_root(settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path / 'media root with spaces'
     settings.FFMPEG_BINARY = 'ffmpeg'
+    settings.FFPROBE_BINARY = 'ffprobe'
 
 
 @pytest.fixture
@@ -123,6 +124,8 @@ def test_processing_builds_expected_ffmpeg_commands_and_marks_ready(
     def run(command, **kwargs):
         assert isinstance(command, list)
         assert kwargs == {'capture_output': True, 'text': True, 'check': False}
+        if command[0] == 'ffprobe':
+            return CompletedProcess(command, 0, '1\n', '')
         if '-hls_time' in command:
             expected_outputs(video)
         return CompletedProcess(command, 0, '', '')
@@ -131,7 +134,11 @@ def test_processing_builds_expected_ffmpeg_commands_and_marks_ready(
 
     process_video(video.pk)
 
-    thumbnail_command, hls_command = [call.args[0] for call in run_mock.call_args_list]
+    probe_command, thumbnail_command, hls_command = [
+        call.args[0] for call in run_mock.call_args_list
+    ]
+    assert probe_command[0] == 'ffprobe'
+    assert probe_command[-1] == video.original.path
     assert thumbnail_command[thumbnail_command.index('-i') + 1] == video.original.path
     assert thumbnail_command[-1] == str(video.thumbnail_output_path)
     assert 'scale=-2:480' in hls_command[hls_command.index('-filter_complex') + 1]
@@ -154,12 +161,36 @@ def test_processing_builds_expected_ffmpeg_commands_and_marks_ready(
     assert video.thumbnail.name == f'videos/{video.storage_id}/thumbnail.jpg'
 
 
+def test_processing_adds_silent_aac_when_source_has_no_audio(category, mocker):
+    video = create_video(category)
+
+    def run(command, **kwargs):
+        del kwargs
+        if command[0] == 'ffprobe':
+            return CompletedProcess(command, 0, '', '')
+        if '-hls_time' in command:
+            expected_outputs(video)
+        return CompletedProcess(command, 0, '', '')
+
+    run_mock = mocker.patch('video_app.tasks.subprocess.run', side_effect=run)
+
+    process_video(video.pk)
+
+    hls_command = run_mock.call_args_list[-1].args[0]
+    assert 'anullsrc=channel_layout=stereo:sample_rate=48000' in hls_command
+    assert hls_command.count('1:a:0') == 3
+    assert '-shortest' in hls_command
+    video.refresh_from_db()
+    assert video.processing_status == Video.ProcessingStatus.READY
+
+
 def test_ffmpeg_failure_is_recorded(category, mocker):
     video = create_video(category)
-    mocker.patch(
-        'video_app.tasks.subprocess.run',
-        return_value=CompletedProcess([], 1, '', 'encoder exploded'),
-    )
+    run_mock = mocker.patch('video_app.tasks.subprocess.run')
+    run_mock.side_effect = [
+        CompletedProcess([], 0, '1\n', ''),
+        CompletedProcess([], 1, '', 'encoder exploded'),
+    ]
 
     process_video(video.pk)
 
@@ -170,7 +201,11 @@ def test_ffmpeg_failure_is_recorded(category, mocker):
 
 def test_missing_ffmpeg_is_recorded(category, mocker):
     video = create_video(category)
-    mocker.patch('video_app.tasks.subprocess.run', side_effect=FileNotFoundError())
+    run_mock = mocker.patch('video_app.tasks.subprocess.run')
+    run_mock.side_effect = [
+        CompletedProcess([], 0, '1\n', ''),
+        FileNotFoundError(),
+    ]
 
     process_video(video.pk)
 
@@ -181,10 +216,12 @@ def test_missing_ffmpeg_is_recorded(category, mocker):
 
 def test_missing_expected_output_is_recorded(category, mocker):
     video = create_video(category)
-    mocker.patch(
-        'video_app.tasks.subprocess.run',
-        return_value=CompletedProcess([], 0, '', ''),
-    )
+    run_mock = mocker.patch('video_app.tasks.subprocess.run')
+    run_mock.side_effect = [
+        CompletedProcess([], 0, '1\n', ''),
+        CompletedProcess([], 0, '', ''),
+        CompletedProcess([], 0, '', ''),
+    ]
 
     process_video(video.pk)
 

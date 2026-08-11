@@ -31,6 +31,35 @@ def _run_ffmpeg(command):
         raise VideoProcessingError(diagnostic[-ERROR_LIMIT:])
 
 
+def _source_has_audio(video):
+    """Use FFprobe to determine whether the source contains an audio stream."""
+    command = [
+        settings.FFPROBE_BINARY,
+        '-v',
+        'error',
+        '-select_streams',
+        'a:0',
+        '-show_entries',
+        'stream=index',
+        '-of',
+        'csv=p=0',
+        video.original.path,
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise VideoProcessingError('FFprobe executable was not found.') from exc
+    if result.returncode:
+        diagnostic = (result.stderr or result.stdout or 'Unknown FFprobe error').strip()
+        raise VideoProcessingError(diagnostic[-ERROR_LIMIT:])
+    return bool(result.stdout.strip())
+
+
 def _thumbnail_command(video):
     """Build the safe thumbnail extraction command."""
     return [
@@ -48,7 +77,7 @@ def _thumbnail_command(video):
     ]
 
 
-def _hls_command(video):
+def _hls_command(video, source_has_audio):
     """Build one aligned adaptive HLS transcode command."""
     output_directory = video.output_directory
     filter_graph = (
@@ -62,13 +91,27 @@ def _hls_command(video):
         '-y',
         '-i',
         video.original.path,
+    ]
+    if not source_has_audio:
+        command.extend(
+            [
+                '-f',
+                'lavfi',
+                '-i',
+                'anullsrc=channel_layout=stereo:sample_rate=48000',
+            ]
+        )
+    command.extend(
+        [
         '-filter_complex',
         filter_graph,
-    ]
+        ]
+    )
+    audio_stream = '0:a:0' if source_has_audio else '1:a:0'
     for video_stream, audio_stream in (
-        ('[v480]', '0:a:0'),
-        ('[v720]', '0:a:0'),
-        ('[v1080]', '0:a:0'),
+        ('[v480]', audio_stream),
+        ('[v720]', audio_stream),
+        ('[v1080]', audio_stream),
     ):
         command.extend(['-map', video_stream, '-map', audio_stream])
 
@@ -123,6 +166,8 @@ def _hls_command(video):
                 'expr:gte(t,n_forced*6)',
             ]
         )
+    if not source_has_audio:
+        command.append('-shortest')
     command.extend(
         [
             '-f',
@@ -185,8 +230,9 @@ def process_video(video_id):
         video.output_directory.mkdir(parents=True, exist_ok=True)
         for resolution in RESOLUTIONS:
             (video.output_directory / resolution).mkdir(parents=True, exist_ok=True)
+        source_has_audio = _source_has_audio(video)
         _run_ffmpeg(_thumbnail_command(video))
-        _run_ffmpeg(_hls_command(video))
+        _run_ffmpeg(_hls_command(video, source_has_audio))
         _validate_outputs(video)
     except (OSError, VideoProcessingError) as exc:
         _set_failed(video_id, exc)
