@@ -86,6 +86,14 @@ def write_manifest(movie_id, resolution='720p', content=MANIFEST_CONTENT):
     return manifest_path
 
 
+def write_master_manifest(movie_id, content=MANIFEST_CONTENT):
+    """Create a master manifest using the endpoint storage contract."""
+    manifest_path = Path(settings.MEDIA_ROOT) / 'videos' / str(movie_id) / 'master.m3u8'
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_bytes(content)
+    return manifest_path
+
+
 def response_body(response):
     """Consume a streaming response and return its byte content."""
     return b''.join(response.streaming_content)
@@ -96,6 +104,19 @@ def test_video_manifest_returns_stored_file(authenticated_client, video):
     write_manifest(video.pk)
 
     response = authenticated_client.get(manifest_url(video.pk))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response['Content-Type'] == 'application/vnd.apple.mpegurl'
+    assert response_body(response) == MANIFEST_CONTENT
+
+
+def test_video_master_manifest_returns_stored_file(authenticated_client, video):
+    """Stream the multivariant playlist through its authenticated endpoint."""
+    write_master_manifest(video.pk)
+
+    response = authenticated_client.get(
+        reverse('video-master-manifest', kwargs={'movie_id': video.pk})
+    )
 
     assert response.status_code == status.HTTP_200_OK
     assert response['Content-Type'] == 'application/vnd.apple.mpegurl'

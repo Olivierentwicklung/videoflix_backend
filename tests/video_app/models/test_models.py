@@ -88,16 +88,15 @@ def test_video_persists_documented_fields_and_thumbnail(drama_category, settings
     assert str(video) == 'Movie Title'
 
 
-def test_video_documented_fields_are_required():
-    """Require every video field exposed by the documented response."""
+def test_video_catalogue_fields_are_required_but_generated_thumbnail_is_optional():
+    """Require catalogue metadata while allowing worker-generated media."""
     video = Video()
 
     with pytest.raises(ValidationError) as exc_info:
         video.full_clean()
 
-    assert {'title', 'description', 'thumbnail', 'category'} <= set(
-        exc_info.value.message_dict
-    )
+    assert {'title', 'description', 'category'} <= set(exc_info.value.message_dict)
+    assert 'thumbnail' not in exc_info.value.message_dict
 
 
 def test_category_exposes_related_videos(drama_category):

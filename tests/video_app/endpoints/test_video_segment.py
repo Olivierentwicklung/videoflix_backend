@@ -224,6 +224,28 @@ def test_video_segment_returns_404_for_invalid_segment_filename(
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
+def test_video_segment_supports_generated_segment_name(authenticated_client, video):
+    """Serve the segment naming convention emitted by the processing job."""
+    write_segment(video.pk, segment='segment_000.ts')
+
+    response = authenticated_client.get(segment_url(video.pk, segment='segment_000.ts'))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response_body(response) == SEGMENT_CONTENT
+
+
+def test_generated_relative_segment_url_does_not_redirect(authenticated_client, video):
+    """Allow variant playlist segment references to resolve directly."""
+    write_segment(video.pk, segment='segment_000.ts')
+
+    response = authenticated_client.get(
+        f'/api/video/{video.pk}/720p/segment_000.ts'
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response_body(response) == SEGMENT_CONTENT
+
+
 def test_video_segment_blocks_windows_style_path_traversal(
     authenticated_client,
     video,
